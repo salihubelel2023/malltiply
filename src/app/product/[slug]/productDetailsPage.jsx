@@ -1,21 +1,23 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react"
+import { useDispatch, useSelector } from "react-redux"
 import { useGetProductBySlugQuery } from "@/redux/services/productApi"
-import { ChevronDown, Upload, Ruler, ChevronRight } from "lucide-react"
+import { ChevronDown, Upload, Ruler, ChevronRight, ZoomIn } from "lucide-react"
 import productCategoryMap from '@/lib/data/productCategoryMap'
 import FloatingCart from "@/app/components/FloatingCart"
 import Link from "next/link"
 import { ShoppingCart } from "lucide-react"
-import { useSelector } from "react-redux"
 import AddToCartButton from "@/app/components/AddToCartButton";
 import Spinner from "@/app/components/Spinner";
 import { useParams } from "next/navigation";
 import InfoModal from "@/app/components/InfoModal";
+import ImageZoomModal from "@/app/components/ImageZoomModal";
 
 export default function ProductDetailsPage() {
   const params = useParams();
   const slug = params.slug;
+  const dispatch = useDispatch(); // ← ADD THIS
   const { data: product, isLoading, isError } = useGetProductBySlugQuery(slug);
 
   // STATE
@@ -24,6 +26,7 @@ export default function ProductDetailsPage() {
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [modal, setModal] = useState(null);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
 
   const totalQuantity = useSelector(state => state.cart.totalQuantity)
 
@@ -129,11 +132,33 @@ export default function ProductDetailsPage() {
   const handleColorSelect = (color) => {
     setSelectedColor(color);
     setSelectedQuantity(1);
+
+    // Switch image in carousel to match the selected color
+    if (images.length > 0) {
+      const matchByUrl = images.findIndex((img) =>
+        img.url?.toLowerCase().includes(color.toLowerCase())
+      );
+      if (matchByUrl !== -1) {
+        setCurrentIndex(matchByUrl);
+      } else {
+        const colorIdx = allColors.findIndex(
+          (c) => c.toLowerCase() === color.toLowerCase()
+        );
+        if (colorIdx !== -1 && colorIdx < images.length) {
+          setCurrentIndex(colorIdx);
+        }
+      }
+    }
   };
 
   const handleVariantSelect = (value) => {
     setSelectedSize(value);
     setSelectedQuantity(1);
+  };
+
+  // ← NEW: Open Cart Modal Handler
+  const handleOpenCartModal = () => {
+    dispatch(openCart());
   };
 
   let startX = 0, endX = 0;
@@ -208,13 +233,26 @@ export default function ProductDetailsPage() {
           {images.length > 0 ? (
             images.map((img, idx) => (
               <img key={idx} src={img.url} alt={`product-image-${idx}`}
-                className="w-full h-[416px] object-contain flex-shrink-0 bg-[#f8f9fa]" />
+                onClick={() => setIsZoomOpen(true)}
+                className="w-full h-[416px] object-contain flex-shrink-0 bg-[#f8f9fa] cursor-zoom-in" />
             ))
           ) : (
             <img src="/placeholder.png" alt="placeholder"
               className="w-full h-[416px] object-cover flex-shrink-0" />
           )}
         </div>
+
+        {/* Zoom trigger icon button */}
+        {images.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIsZoomOpen(true)}
+            className="absolute top-6 right-3 w-8 h-8 flex items-center justify-center bg-black/60 hover:bg-black/80 rounded-full text-white shadow-md transition cursor-pointer z-10"
+            title="Zoom image"
+          >
+            <ZoomIn size={16} />
+          </button>
+        )}
 
         {/* Upload icon */}
         {/* <div className="absolute top-6 right-2 w-8 h-8 flex items-center justify-center bg-black/80 rounded-full cursor-pointer">
@@ -433,9 +471,10 @@ export default function ProductDetailsPage() {
 
     
 
-      {/* ADD TO CART SECTION */}
+      {/* Native Add to Cart Bar */}
       <AddToCartButton
         product={product}
+        displayPrice={product.price}
         Originalprice={product.price}
         selectedColor={selectedColor}
         selectedSize={selectedSize}
@@ -443,7 +482,6 @@ export default function ProductDetailsPage() {
         onQuantitySync={setSelectedQuantity}
         displaySku={displaySku}
         displayQuantity={displayQuantity}
-        onSuccess={() => alert("Added to cart successfully!")}
         isOutOfStock={isOutOfStock}
       />
 
@@ -462,6 +500,14 @@ export default function ProductDetailsPage() {
           </p>
         </InfoModal>
       )}
+
+      {/* Image Zoom Lightbox Modal */}
+      <ImageZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        images={images}
+        initialIndex={currentIndex}
+      />
 
     </div>
   );

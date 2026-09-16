@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
 import InfoModal from "./InfoModal";
+import { MessageCircle } from "lucide-react";
 
 export default function Footer() {
   const [modal, setModal] = useState(null)
@@ -198,9 +199,15 @@ export default function Footer() {
               Our support team is available on WhatsApp to assist you with any issues.
             </p>
 
-            <p className="text-[13px] font-inter text-black">
-              Tap the WhatsApp support option to start a conversation.
-            </p>
+            <a
+              href="https://wa.me/2349065941258"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-[#005770] hover:text-[#004560] transition font-medium text-[14px] mt-1"
+            >
+              <MessageCircle size={20} />
+              Chat on WhatsApp
+            </a>
           </InfoModal>
         )}
 
